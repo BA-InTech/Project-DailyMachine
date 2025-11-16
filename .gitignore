@@ -416,3 +416,19 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+# Custom ignore for my ASP.NET + React project
+
+# Build folders
+bin/
+obj/
+
+# Published output
+wwwroot/
+!wwwroot/uploads/
+
+# Database files
+*.db
+
+# Node dependencies (React)
+node_modules/
+package-lock.json
