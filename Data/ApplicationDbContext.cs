@@ -6,11 +6,8 @@ namespace backend.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        {
-        }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-        // --- Daftar Tabel di Database ---
         public DbSet<Machine> Machines { get; set; }
         public DbSet<ProductionReport> ProductionReports { get; set; }
         public DbSet<Line> Lines { get; set; }
@@ -22,35 +19,31 @@ namespace backend.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // --- Aturan Main untuk Setiap Tabel ---
-
-            // 1. Aturan untuk ProductionReport (dan relasinya)
             modelBuilder.Entity<ProductionReport>(entity =>
             {
                 entity.Property(e => e.Performance)
                     .HasConversion(
                         v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
-                        v => JsonSerializer.Deserialize<Performance>(v, JsonSerializerOptions.Default));
+                        v => JsonSerializer.Deserialize<Performance>(v, JsonSerializerOptions.Default)
+                    );
                 entity.HasMany(e => e.Lines).WithOne().OnDelete(DeleteBehavior.Cascade);
             });
 
-            // 2. Aturan untuk Line (dan relasinya)
             modelBuilder.Entity<Line>(entity =>
             {
                 entity.Property(e => e.MachinePerformance)
                     .HasConversion(
                         v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
-                        v => JsonSerializer.Deserialize<MachinePerformance>(v, JsonSerializerOptions.Default));
+                        v => JsonSerializer.Deserialize<MachinePerformance>(v, JsonSerializerOptions.Default)
+                    );
                 entity.HasMany(e => e.Models).WithOne().OnDelete(DeleteBehavior.Cascade);
             });
 
-            // 3. Aturan untuk Model (dan relasinya)
             modelBuilder.Entity<Model>(entity =>
             {
                 entity.HasMany(e => e.Issues).WithOne().OnDelete(DeleteBehavior.Cascade);
             });
 
-            // 4. Konfigurasi standar
             modelBuilder.Entity<Issue>().HasKey(e => e.Id);
             modelBuilder.Entity<Machine>().HasKey(e => e.MachineId);
             
