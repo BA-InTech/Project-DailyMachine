@@ -16,12 +16,20 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database (SQLite)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                      ?? "Data Source=dailymachine.db";
+// UBAH DISINI: Ganti dari SQLite ke PostgreSQL
+// Pastikan Anda mendapatkan connection string dari Environment Variables Railway,
+// JANGAN gunakan fallback ke file database lokal.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Jika connection string kosong, lempar error agar deploy gagal & Anda tahu ada masalah
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString)
+    // UBAH DISINI: Ganti dari UseSqlite ke UseNpgsql
+    options.UseNpgsql(connectionString) 
 );
 
 // CORS
@@ -56,7 +64,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// UBAH DISINI: Tambahkan ini untuk React Router
+// Ini harus setelah MapControllers() tapi sebelum Run()
+// Ini akan mengirim index.html untuk rute apa pun yang tidak dikenal (seperti /login, /dashboard)
+app.MapFallbackToFile("index.html");
+
+
 // ------------------------ Run ------------------------
-// Railway akan set environment variable PORT
+// Bagian ini sudah SEMPURNA. Tidak perlu diubah.
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5098";
 app.Run($"http://0.0.0.0:{port}");
