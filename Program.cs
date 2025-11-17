@@ -6,57 +6,41 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-// NOTE:
-// Pastikan ApplicationDbContext berada di namespace backend.Data
-// dan EPPlus sudah diinstall (EPPlus package ada di backend.csproj).
+// EPPlus license
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- EPPlus license (panggil sekali) ---
-// Gunakan namespace lengkap supaya tidak ambiguous di editor/OmniSharp
-OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-
-// --- Services ---
+// ------------------------ Services ------------------------
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database (SQLite) - fallback kalau connection string belum ada
+// Database (SQLite)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Data Source=dailymachine.db";
+                      ?? "Data Source=dailymachine.db";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString)
 );
 
-// CORS (Baca dari appsettings)
+// CORS
+var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>()
+                     ?? new string[] { "http://localhost:3000" };
+
 builder.Services.AddCors(options =>
 {
-    // Ambil daftar origin yang diizinkan dari appsettings.json
-    var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
-
-    if (allowedOrigins == null || allowedOrigins.Length == 0)
-    {
-        // Fallback jika tidak ada setting di appsettings (minimal izinkan localhost)
-        allowedOrigins = ["http://localhost:3000"];
-        Console.WriteLine("[Warning] CORS AllowedOrigins not found in appsettings. Allowing default: http://localhost:3000");
-    }
-
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins(allowedOrigins) // <-- Baca dari variabel allowedOrigins
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
 
-// ===================================================================
-// BLOK CORS KEDUA (YANG DUPLIKAT) SUDAH DIHAPUS DARI SINI
-// ===================================================================
-
 var app = builder.Build();
 
-// --- HTTP pipeline ---
+// ------------------------ Middleware ------------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -66,12 +50,13 @@ if (app.Environment.IsDevelopment())
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// Urutan routing -> cors -> auth penting
 app.UseRouting();
-app.UseCors("AllowReactApp"); // <-- Ini akan menggunakan "AllowReactApp" yang BENAR
+app.UseCors("AllowReactApp");
 app.UseAuthorization();
 
 app.MapControllers();
 
-// Jalankan app (ubah port jika perlu)
-app.Run("http://0.0.0.0:5098");
+// ------------------------ Run ------------------------
+// Railway akan set environment variable PORT
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5098";
+app.Run($"http://0.0.0.0:{port}");
